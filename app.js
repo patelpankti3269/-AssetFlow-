@@ -193,6 +193,7 @@ class AssetFlowApp {
         if(!name) return alert('Name required');
 
         const newAsset = {
+            id: 'a' + Date.now(),
             tag: 'AF-' + Math.floor(Math.random()*9000 + 1000),
             name, category: cat, status: 'available', location: loc, holder: null
         };
@@ -205,7 +206,8 @@ class AssetFlowApp {
             });
             await this.fetchAssets();
         } catch (e) {
-            console.error("Error creating asset", e);
+            // Backend unavailable — update local state
+            this.state.assets.push(newAsset);
         }
 
         this.closeModal('modal-register-asset');
@@ -235,7 +237,7 @@ class AssetFlowApp {
             return;
         }
 
-        const asset = this.state.assets.find(a => a.id == id);
+        const asset = this.state.assets.find(a => a.id === id);
         
         // Double allocation block
         if(asset.status === 'allocated') {
@@ -259,7 +261,7 @@ class AssetFlowApp {
         const id = document.getElementById('allocation-asset-select').value;
         if(!id) return alert('Select an asset');
         
-        const asset = this.state.assets.find(a => a.id == id);
+        const asset = this.state.assets.find(a => a.id === id);
         const toId = document.getElementById('allocation-to').value;
         const toUser = this.state.users.find(u => u.id === toId);
 
@@ -290,8 +292,8 @@ class AssetFlowApp {
 
     simulateBooking() {
         const slot = document.getElementById('booking-slot-10');
-        slot.innerHTML = `<div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10B981; padding: 12px; border-radius: 4px; color: #10B981; margin-top: 12px; font-size: 13px;">Requested 9:30 to 10:30 - Booking Confirmed</div>`;
-        alert("Booking confirmed successfully!");
+        slot.innerHTML = `<div class="conflict-block">Requested 9:30 to 10:30 - conflict - slot is unavailable</div>`;
+        alert("Conflict detected! Server blocked this booking.");
     }
 
     renderMaintenance() {
