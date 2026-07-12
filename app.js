@@ -290,8 +290,8 @@ class AssetFlowApp {
 
     simulateBooking() {
         const slot = document.getElementById('booking-slot-10');
-        slot.innerHTML = `<div class="conflict-block">Requested 9:30 to 10:30 - conflict - slot is unavailable</div>`;
-        alert("Conflict detected! Server blocked this booking.");
+        slot.innerHTML = `<div style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10B981; padding: 12px; border-radius: 4px; color: #10B981; margin-top: 12px; font-size: 13px;">Requested 9:30 to 10:30 - Booking Confirmed</div>`;
+        alert("Booking confirmed successfully!");
     }
 
     renderMaintenance() {
