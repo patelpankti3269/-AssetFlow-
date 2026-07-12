@@ -52,7 +52,19 @@ class AssetFlowApp {
         this.draggedCard = null;
     }
 
-    login() {
+    async fetchAssets() {
+        try {
+            const res = await fetch('http://localhost:8000/api/assets/');
+            if (res.ok) {
+                const data = await res.json();
+                this.state.assets = data;
+            }
+        } catch (e) {
+            console.error("Failed to fetch assets from backend", e);
+        }
+    }
+
+    async login() {
         const email = document.getElementById('login-email').value;
         const user = this.state.users.find(u => u.email === email) || this.state.users[0];
         
@@ -68,6 +80,8 @@ class AssetFlowApp {
         adminEls.forEach(el => {
             el.style.display = user.role === 'admin' ? 'block' : 'none';
         });
+
+        await this.fetchAssets();
 
         this.setupNavigation();
         this.navigate('dashboard');
@@ -171,18 +185,30 @@ class AssetFlowApp {
         deptSel.innerHTML = this.state.departments.map(d => `<option>${d.name}</option>`).join('');
     }
 
-    registerAsset() {
+    async registerAsset() {
         const name = document.getElementById('reg-name').value;
         const cat = document.getElementById('reg-cat').value;
         const loc = document.getElementById('reg-loc').value;
         
         if(!name) return alert('Name required');
 
-        this.state.assets.push({
+        const newAsset = {
             id: 'a' + Date.now(),
             tag: 'AF-' + Math.floor(Math.random()*9000 + 1000),
             name, category: cat, status: 'available', location: loc, holder: null
-        });
+        };
+
+        try {
+            await fetch('http://localhost:8000/api/assets/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newAsset)
+            });
+            await this.fetchAssets();
+        } catch (e) {
+            // Backend unavailable — update local state
+            this.state.assets.push(newAsset);
+        }
 
         this.closeModal('modal-register-asset');
         this.renderAssets();
@@ -231,7 +257,7 @@ class AssetFlowApp {
         `;
     }
 
-    submitAllocationRequest() {
+    async submitAllocationRequest() {
         const id = document.getElementById('allocation-asset-select').value;
         if(!id) return alert('Select an asset');
         
@@ -248,6 +274,15 @@ class AssetFlowApp {
             asset.status = 'allocated';
             asset.holder = toUser.id;
             asset.holderName = toUser.name;
+
+            try {
+                await fetch(`http://localhost:8000/api/assets/${asset.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'allocated', holder: toUser.id, holderName: toUser.name })
+                });
+            } catch (e) { console.error(e); }
+
             alert(`Asset ${asset.tag} directly allocated to ${toUser.name}.`);
             this.state.notifications.unshift({ type: 'booking', msg: `${asset.name} ${asset.tag} assigned to ${toUser.name}`, time: 'Just now' });
         }
@@ -290,7 +325,7 @@ class AssetFlowApp {
         this.draggedCard = id;
     }
 
-    drop(e, newStatus) {
+    async drop(e, newStatus) {
         e.preventDefault();
         const item = this.state.maintenance.find(m => m.id === this.draggedCard);
         if(item && item.status !== newStatus) {
@@ -301,6 +336,14 @@ class AssetFlowApp {
             if(asset) {
                 if(newStatus === 'approved') asset.status = 'maintenance';
                 if(newStatus === 'resolved') asset.status = 'available'; // Simplified
+                
+                try {
+                    await fetch(`http://localhost:8000/api/assets/${asset.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: asset.status })
+                    });
+                } catch(err) { console.error(err); }
             }
             
             this.renderMaintenance();
